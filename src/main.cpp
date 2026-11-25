@@ -52,8 +52,82 @@ optical sort = optical(PORT20);//颜色传感器
 
 //底盘手动控制
 void chassis_control(){
+        float straight     = Controller.Axis3.position();   //摇杆前后
+        float turn         = Controller.Axis1.position();   //摇杆左右
+
+        //死区
+        if(straight< 5 && straight > -5)straight = 0;
+        if(turn < 5 && turn > -5)turn = 0;
+
+        //计算前进和转向
+        float left_output  = straight - turn;
+        if(left_output > 100.0) left_output =  100.0;
+        if(left_output < -100.0)left_output = -100.0;
+        float right_output = straight + turn;
+        if(right_output > 100.0) right_output =  100.0;
+        if(right_output < -100.0)right_output = -100.0;
+        //电机执行
+        left_drive.spin(fwd,left_output,pct);
+        right_drive.spin(fwd,right_output,pct);
 
 }
+
+//里程数（轮径未测，当成2.75）
+const double IN_PER_DEG = 3.14159266 * 2.75 * (43.0/50.0)/360.0; // = 0.020639  电机转一度走过的距离
+
+
+double dist_in = 0;  //累积里程，单位英寸
+
+void update_distance(){
+    static double last_l = 0;   //上次左轮读数
+    static double last_r = 0;   //上次右轮读数
+
+    double l = left_motor_1.position(degrees);  //现在左轮角度
+    double r = right_motor_1.position(degrees); //现在右轮角度
+
+    dist_in += ((l - last_l) + (r - last_r))/2.0 * IN_PER_DEG;
+    last_l = l;
+    last_r = r;
+}
+
+
+//电机最高温度
+double hottest(){
+    double m = right_motor_1.temperature(celsius);
+
+    double j = right_motor_2.temperature(celsius);
+    if(m<j)m=j;
+
+     j = right_motor_3.temperature(celsius);
+    if(m<j)m=j;
+    
+    j = right_motor_4.temperature(celsius);
+    if(m<j)m=j;
+
+    j = right_motor_5.temperature(celsius);
+    if(m<j)m=j;
+
+    j = left_motor_1.temperature(celsius);
+    if(m<j)m=j;
+
+    j = left_motor_2.temperature(celsius);
+    if(m<j)m=j;
+
+    j = left_motor_3.temperature(celsius);
+    if(m<j)m=j;
+
+    j = left_motor_4.temperature(celsius);
+    if(m<j)m=j;
+
+    j = left_motor_5.temperature(celsius);
+    if(m<j)m=j;
+
+
+
+    return m;
+}
+
+
 //吸球
 void intake_ball(){
 
@@ -76,8 +150,26 @@ void hook_control(){
 }
 //遥控器屏幕的数据打印
 void display(){
+    while(true){
+        Controller.Screen.clearScreen();
+        Controller.Screen.setCursor(1,1);   //移动光标
+        Controller.Screen.print("T: %.0fC", hottest());
 
+        Controller.Screen.setCursor(2,1);
+        Controller.Screen.print("D: %.1fin",dist_in);
+
+        Controller.Screen.setCursor(3,1);
+        Controller.Screen.print("H:%.0f",imu.heading());
+
+
+        wait(50,msec);
+
+
+    }
 }
+
+
+
 
 
 int main() {
@@ -89,7 +181,10 @@ thread display_thread(display);
 
 
 while (true) {
+    //底盘手动控制
     chassis_control();
+    //里程数计算
+    update_distance();
     intake_ball();
     high_bridge();
     mid_bridge();
