@@ -15,6 +15,7 @@ vex::brain       Brain;
 
 // define your global instances of motors and other devices here
 
+competition Competition;
 
 controller Controller = controller(primary);
 
@@ -145,15 +146,15 @@ bool color_sort(){
     if(is_blue){
         blue_cnt++;
     } else {
-        blue_cnt = 0;        // 只要有一帧不是蓝，立刻清零
+        blue_cnt = 0;        // 只要有10ms不是蓝，立刻清零
     }
 
-    if(blue_cnt >= 4){       // 连续 4 帧(40ms)都蓝，才认
-        time = 30;           // 球还在，继续刷 → 一直吐
+    if(blue_cnt > 0){       // 最少一毫秒蓝
+        time = 10;           // 延时
         return false;
     }
 
-    if(time > 0){            // 球走了，再吐 300ms 送出门
+    if(time > 0){            //延时
         time--;
         return false;
     }
@@ -169,14 +170,14 @@ void intake_ball(){
         intake2.spin(reverse,100,pct);
         intake3.spin(reverse,100,pct);
         outputmotor.stop();
-        sortmotor.spin(fwd,1,pct);
+        sortmotor.spin(fwd,10,pct);
         mark.set(true);
     }
     else{
         intake_motor.stop();
         intake1.spin(fwd,50,pct);
-        intake2.stop();
-        intake3.stop();
+        intake2.spin(reverse,100,pct);
+        intake3.spin(reverse,100,pct);
         outputmotor.stop();
         sortmotor.spin(reverse,100,pct);
         mark.set(true);
@@ -186,8 +187,8 @@ void intake_ball(){
 }
 //吐高桥 R1
 void high_bridge(){
-    intake_motor.stop();
-    intake1.stop();
+    intake_motor.spin(fwd,100,pct);
+    intake1.spin(fwd,50,pct);
     intake2.spin(reverse,60,pct);
     intake3.spin(reverse,100,pct);
     outputmotor.spin(reverse,100,pct);
@@ -197,8 +198,8 @@ void high_bridge(){
 }
 //吐中桥 L2
 void mid_bridge(){
-    intake_motor.stop();
-    intake1.stop();
+    intake_motor.spin(fwd,100,pct);
+    intake1.spin(fwd,50,pct);
     intake2.spin(reverse,100,pct);
     intake3.spin(fwd,100,pct);
     outputmotor.spin(fwd,100,pct);
@@ -305,6 +306,7 @@ imu.calibrate();//开始校准
 while(imu.isCalibrating())wait(20,msec);//等待校准
 
 thread display_thread(display);
+//Competition.drivercontrol();
 
 
 while (true) {
@@ -317,3 +319,4 @@ while (true) {
     wait(10,msec);
 }
 }
+    
